@@ -150,7 +150,7 @@ async function fetchRealNews() {
     ];
 
     // Verified fact-based sources with high credibility ratings
-    const sources = 'reuters,associated-press,bbc-news,the-guardian,al-jazeera-english,cnn,abc-news,npr,bloomberg,financial-times';
+    const sources = 'reuters,associated-press,bbc-news,al-jazeera-english,cnn,abc-news,npr,bloomberg';
     const allArticles = [];
 
     // Fetch news for each query to get comprehensive coverage
