@@ -1,9 +1,11 @@
 import fs from "fs";
 import path from "path";
+import OpenAI from "openai";
 
-// NewsAPI configuration
+// API configurations
 const NEWSAPI_KEY = process.env.NEWSAPI_KEY;
 const NEWSAPI_BASE_URL = 'https://newsapi.org/v2';
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // Cache configuration
 const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes in milliseconds
@@ -217,8 +219,12 @@ async function fetchRealNews() {
       };
     });
 
-    console.log(`✅ Processed ${processedArticles.length} real news articles from verified sources`);
-    return processedArticles;
+    // Translate all articles to Russian
+    console.log('🔄 Translating articles to Russian...');
+    const translatedArticles = await translateArticlesToRussian(processedArticles);
+    
+    console.log(`✅ Processed and translated ${translatedArticles.length} real news articles from verified sources`);
+    return translatedArticles;
 
   } catch (error) {
     console.error('❌ Error fetching real news:', error);
@@ -265,6 +271,88 @@ function categorizeRealNews(article) {
   }
   
   return "Главные";
+}
+
+// Translate articles to Russian using OpenAI
+async function translateArticlesToRussian(articles) {
+  try {
+    if (!process.env.OPENAI_API_KEY) {
+      console.warn('⚠️ OpenAI API key not found, returning articles without translation');
+      return articles;
+    }
+
+    // Process articles in batches to avoid API limits
+    const batchSize = 3;
+    const translatedArticles = [];
+    
+    for (let i = 0; i < articles.length; i += batchSize) {
+      const batch = articles.slice(i, i + batchSize);
+      const batchPrompts = batch.map(article => ({
+        title: article.title,
+        summary: article.summary,
+        content: article.fullContent
+      }));
+      
+      const prompt = `Переведите следующие новостные статьи на русский язык, сохраняя журналистский стиль и фактуальность. Особое внимание уделяйте гуманитарным аспектам и антивоенной направленности.
+
+Статьи для перевода:
+${JSON.stringify(batchPrompts, null, 2)}
+
+Верните перевод в том же JSON формате с полями title, summary, content. Сохраняйте профессиональный журналистский стиль.`;
+      
+      try {
+        const response = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: prompt }],
+          response_format: { type: "json_object" },
+          temperature: 0.3
+        });
+        
+        const translatedBatch = JSON.parse(response.choices[0].message.content);
+        
+        // Merge translated content back with original article data
+        batch.forEach((article, index) => {
+          // Handle different response formats from OpenAI
+          let translatedArray = [];
+          if (Array.isArray(translatedBatch)) {
+            translatedArray = translatedBatch;
+          } else if (translatedBatch.articles) {
+            translatedArray = translatedBatch.articles;
+          } else {
+            translatedArray = Object.values(translatedBatch);
+          }
+          const translated = translatedArray[index];
+          if (translated && translated.title) {
+            translatedArticles.push({
+              ...article,
+              title: translated.title,
+              summary: translated.summary,
+              fullContent: translated.content
+            });
+          } else {
+            translatedArticles.push(article); // Fallback to original if translation failed
+          }
+        });
+        
+        // Small delay between batches to respect rate limits
+        if (i + batchSize < articles.length) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+        
+      } catch (batchError) {
+        console.error(`❌ Translation batch ${Math.floor(i/batchSize) + 1} failed:`, batchError.message);
+        // Add original articles if translation fails
+        translatedArticles.push(...batch);
+      }
+    }
+    
+    console.log(`✅ Successfully translated ${translatedArticles.length} articles to Russian`);
+    return translatedArticles;
+    
+  } catch (error) {
+    console.error('❌ Translation error:', error);
+    return articles; // Return original articles if translation completely fails
+  }
 }
 
 // Determine importance level based on source credibility and recency
