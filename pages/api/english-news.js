@@ -138,29 +138,53 @@ async function fetchRealNews() {
     }
 
     // Focus on Ukraine-Russia conflict and political news from reliable sources
+    // Enhanced query targeting for more interesting and relevant content
     const queries = [
-      'Ukraine Russia conflict',
-      'Trump foreign policy',
-      'peace negotiations Ukraine',
-      'humanitarian crisis Ukraine',
-      'diplomatic efforts Russia'
+      'Ukraine Russia conflict latest developments',
+      'Trump foreign policy Ukraine Russia',
+      'peace negotiations Ukraine ceasefire',
+      'humanitarian crisis Ukraine refugees',
+      'diplomatic efforts Russia sanctions',
+      'NATO Ukraine military aid',
+      'Zelensky Putin negotiations'
     ];
 
-    const sources = 'reuters,associated-press,bbc-news,the-guardian,al-jazeera-english,cnn,abc-news,npr';
+    // Verified fact-based sources with high credibility ratings
+    const sources = 'reuters,associated-press,bbc-news,the-guardian,al-jazeera-english,cnn,abc-news,npr,bloomberg,financial-times';
     const allArticles = [];
 
     // Fetch news for each query to get comprehensive coverage
-    for (const query of queries) {
-      const url = `${NEWSAPI_BASE_URL}/everything?q=${encodeURIComponent(query)}&sources=${sources}&language=en&sortBy=publishedAt&pageSize=20&apiKey=${NEWSAPI_KEY}`;
+    // Enhanced error handling and rate limiting consideration
+    for (let i = 0; i < queries.length; i++) {
+      const query = queries[i];
+      const url = `${NEWSAPI_BASE_URL}/everything?q=${encodeURIComponent(query)}&sources=${sources}&language=en&sortBy=publishedAt&pageSize=15&apiKey=${NEWSAPI_KEY}`;
       
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`NewsAPI request failed: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      if (data.articles && data.articles.length > 0) {
-        allArticles.push(...data.articles);
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          console.warn(`NewsAPI query ${i + 1} failed with status ${response.status}`);
+          continue; // Continue with other queries if one fails
+        }
+        
+        const data = await response.json();
+        if (data.articles && data.articles.length > 0) {
+          // Filter out articles without meaningful content
+          const validArticles = data.articles.filter(article => 
+            article.title && 
+            article.description && 
+            article.title !== '[Removed]' && 
+            article.description !== '[Removed]'
+          );
+          allArticles.push(...validArticles);
+        }
+        
+        // Small delay to respect rate limits
+        if (i < queries.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      } catch (fetchError) {
+        console.warn(`NewsAPI query ${i + 1} failed:`, fetchError.message);
+        continue;
       }
     }
 
@@ -245,14 +269,21 @@ function categorizeRealNews(article) {
 
 // Determine importance level based on source credibility and recency
 function getImportanceLevel(article, index) {
-  const reliableSources = ['reuters', 'associated press', 'bbc', 'guardian', 'al jazeera'];
+  const reliableSources = [
+    'reuters', 'associated press', 'bbc', 'guardian', 'al jazeera',
+    'npr', 'cnn', 'abc news', 'bloomberg', 'financial times'
+  ];
   const sourceName = article.source.name.toLowerCase();
   const isReliableSource = reliableSources.some(source => sourceName.includes(source));
   const isRecent = new Date() - new Date(article.publishedAt) < 6 * 60 * 60 * 1000; // 6 hours
   
-  if (index < 3 && isReliableSource && isRecent) return 'Breaking';
-  if (index < 8 && isReliableSource) return 'Critical';
-  if (index < 15) return 'Urgent';
+  // Enhanced fact-checking: prefer highly credible sources
+  const highlyCredible = ['reuters', 'associated press', 'bbc'];
+  const isHighlyCredible = highlyCredible.some(source => sourceName.includes(source));
+  
+  if (index < 3 && isHighlyCredible && isRecent) return 'Breaking';
+  if (index < 5 && isReliableSource && isRecent) return 'Critical';
+  if (index < 10 && isReliableSource) return 'Urgent';
   return 'Developing';
 }
 
