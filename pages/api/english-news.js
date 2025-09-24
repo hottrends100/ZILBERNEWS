@@ -8,7 +8,7 @@ const NEWSAPI_BASE_URL = 'https://newsapi.org/v2';
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // Cache configuration
-const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes in milliseconds
+const CACHE_DURATION = 60 * 60 * 1000; // 60 minutes (1 hour) in milliseconds
 const CACHE_FILE = path.join(process.cwd(), 'news-cache.json');
 
 // Background generation state
@@ -119,7 +119,7 @@ function startBackgroundGeneration() {
     return; // Already running
   }
   
-  console.log('🚀 Starting background news generation (every 15 minutes)');
+  console.log('🚀 Starting background news generation (every hour)');
   
   // Generate immediately if cache needs refresh
   if (cacheNeedsRefresh()) {
