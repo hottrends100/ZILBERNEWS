@@ -37,15 +37,29 @@ This is a Next.js application that displays a Russian news interface with infini
 - Production server also configured for port 5000
 
 ## Recent Changes (Sep 24, 2025)
+### ✅ NewsAPI Integration with Real Images (Latest)
+- **Real news images** - High-quality images from NewsAPI sources (Al Jazeera, CNN, Reuters, BBC, etc.)
+- **Next.js Image optimization** with responsive design, loading states, and error handling
+- **Professional visual layout** - 16:9 aspect ratio with gradient overlays for text readability
+- **Performance optimized** - Priority loading for top articles, lazy loading for others
+- **Seamless integration** with existing translation and caching system
+- **Mobile responsive** design with proper aspect ratios across devices
+
+### ✅ Hourly News Updates  
+- **Updated refresh interval** from 15 minutes to once per hour
+- **Cost optimization** while maintaining fresh, current news content
+- **Background processing** continues with improved efficiency
+
 ### ✅ Russian News System with GPT-4o Mini
 - **Russian language conversion** - Complete interface and content generation in Russian 
-- **GPT-4o mini model** for efficient and cost-effective content generation
+- **Real news translation** from verified sources (Reuters, BBC, Al Jazeera, CNN) instead of generated content
+- **GPT-4o mini model** for efficient and cost-effective translation
 - **Specialized news focus** on Ukraine-Russia conflict, Trump politics, and anti-war perspectives
 - **Anti-war editorial stance** emphasizing humanitarian concerns and peace efforts
-- **15-minute caching system** for cost efficiency and performance
+- **Smart caching system** for cost efficiency and performance (hourly updates)
 - **Russian categories**: Главные, Украина-Россия, Политика Трампа, Мирные усилия, Гуманитарные, Антивоенное движение
 - **Professional journalism** with focus on civilian protection, peace negotiations, and human impact
-- **Performance optimization**: Cached responses in 4ms vs 30-60 seconds for fresh generation
+- **Performance optimization**: Cached responses serve in 4ms vs 30-60 seconds for fresh generation
 
 ### Previous Changes (Sep 23, 2025)
 - Imported GitHub project and configured for Replit environment

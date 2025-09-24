@@ -2,6 +2,72 @@
 const nextConfig = {
   reactStrictMode: true,
   
+  // Enable remote images from NewsAPI sources
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**.aljazeera.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'media.zenfs.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.cnn.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.reuters.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.bbc.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.bbc.co.uk',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.abcnews.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'i.abcnewsfe.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.ap.org',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.apnews.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.npr.org',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.bloomberg.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.ft.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.theguardian.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'bl-i.thgim.com',
+      },
+    ],
+  },
+  
   // Production optimizations
   compress: true,
   generateEtags: false,

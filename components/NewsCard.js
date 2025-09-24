@@ -1,10 +1,13 @@
 // components/NewsCard.js
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 
 export default function NewsCard({ article }) {
   const [open, setOpen] = useState(false);
   const [shareClicked, setShareClicked] = useState(null);
+  const [imageError, setImageError] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
 
   // класс бейджа по важности
   const badgeClass =
@@ -75,10 +78,36 @@ export default function NewsCard({ article }) {
 
   return (
     <div 
-      className="bg-white dark:bg-gray-800 rounded-xl shadow p-4 mb-4 border border-gray-100 dark:border-gray-700 cursor-pointer transition-all duration-200 hover:shadow-lg hover:bg-gray-50 dark:hover:bg-gray-750"
+      className="bg-white dark:bg-gray-800 rounded-xl shadow mb-4 border border-gray-100 dark:border-gray-700 cursor-pointer transition-all duration-200 hover:shadow-lg hover:bg-gray-50 dark:hover:bg-gray-750 overflow-hidden"
       onClick={handleCardClick}
     >
-      <div className="flex-1">
+      {/* News Image */}
+      {article.urlToImage && !imageError && (
+        <div className="relative w-full h-48 sm:h-56 bg-gray-200 dark:bg-gray-700">
+          {imageLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-200 dark:bg-gray-700 animate-pulse">
+              <div className="w-12 h-12 border-4 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
+            </div>
+          )}
+          <Image
+            src={article.urlToImage}
+            alt={article.title}
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            onLoad={() => setImageLoading(false)}
+            onError={() => {
+              setImageError(true);
+              setImageLoading(false);
+            }}
+            priority={article.rank === 1} // Priority loading for first article
+          />
+          {/* Gradient overlay for text readability */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
+        </div>
+      )}
+      
+      <div className="p-4 flex-1">
         <h2 className="text-xl sm:text-2xl font-bold mb-2 leading-tight">
           {article.title}
         </h2>
