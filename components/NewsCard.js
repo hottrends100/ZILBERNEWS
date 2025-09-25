@@ -203,6 +203,7 @@ export default function NewsCard({ article }) {
             >
               <TwitterIcon />
             </button>
+            </div>
           </div>
         </div>
     </div>
