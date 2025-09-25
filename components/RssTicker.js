@@ -3,9 +3,24 @@ import { useState, useEffect, useRef } from 'react';
 const RssTicker = () => {
   const [rssItems, setRssItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [lastFetchTime, setLastFetchTime] = useState(0);
   const abortControllerRef = useRef(null);
+  const cacheRef = useRef(null);
+  const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes in milliseconds
 
   const fetchRssData = async (retryCount = 0, isBackgroundUpdate = false) => {
+    const now = Date.now();
+    
+    // Check if we have cached data that's still fresh
+    if (cacheRef.current && (now - lastFetchTime) < CACHE_DURATION) {
+      if (!isBackgroundUpdate) {
+        setRssItems(cacheRef.current);
+        setLoading(false);
+        console.log('📦 Using cached RSS data');
+      }
+      return;
+    }
+    
     try {
       // Cancel any ongoing request
       if (abortControllerRef.current) {
@@ -20,6 +35,8 @@ const RssTicker = () => {
         setLoading(true);
       }
       
+      console.log(isBackgroundUpdate ? '🔄 Background refresh of RSS cache...' : '📡 Fetching RSS feed...');
+      
       const response = await fetch('/api/rss-proxy', {
         signal: abortControllerRef.current.signal
       });
@@ -33,7 +50,7 @@ const RssTicker = () => {
       const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
       
       const items = xmlDoc.querySelectorAll('item');
-      const newsItems = Array.from(items).slice(0, 10).map(item => {
+      const newsItems = Array.from(items).map(item => {
         const title = item.querySelector('title')?.textContent || '';
         const link = item.querySelector('link')?.textContent || '';
         const pubDate = item.querySelector('pubDate')?.textContent || '';
@@ -50,13 +67,22 @@ const RssTicker = () => {
         };
       });
       
-      // Sort by publication date (newest first)
+      // Sort by publication date (newest first) and take top 10
       newsItems.sort((a, b) => b.pubDate - a.pubDate);
+      const topNews = newsItems.slice(0, 10);
       
-      setRssItems(newsItems);
+      // Update cache
+      cacheRef.current = topNews;
+      setLastFetchTime(now);
+      
+      // Hot-swap the data seamlessly
+      setRssItems(topNews);
+      
       if (!isBackgroundUpdate) {
         setLoading(false);
       }
+      
+      console.log(isBackgroundUpdate ? '✅ Background cache updated' : '✅ RSS feed loaded and cached');
     } catch (error) {
       // Ignore aborted requests (common in React strict mode)
       if (error.name === 'AbortError') {
@@ -91,12 +117,12 @@ const RssTicker = () => {
       }
     }, 1500);
     
-    // Set up interval to refresh every 60 seconds (background updates)
+    // Set up interval to refresh cache every 10 minutes (background updates)
     intervalId = setInterval(() => {
       if (mounted) {
         fetchRssData(0, true); // true = background update
       }
-    }, 60000);
+    }, CACHE_DURATION);
     
     return () => {
       mounted = false;
