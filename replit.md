@@ -36,8 +36,17 @@ This is a Next.js application that displays a Russian news interface with infini
 - Start: `npm start`
 - Production server also configured for port 5000
 
-## Recent Changes (Sep 24, 2025)
-### ✅ NewsAPI Integration with Real Images (Latest)
+## Recent Changes (Sep 25, 2025)
+### ✅ GNews API Integration - Dual News Sources (Latest)
+- **Dual API system** - Now combines GNews (60,000+ global sources) + NewsAPI (premium verified sources)
+- **Parallel fetching** - Both APIs fetch simultaneously for better performance and broader coverage  
+- **Smart aggregation** - Normalizes different API formats, removes duplicates, ranks by importance
+- **Enhanced coverage** - Access to Reuters, BBC, CNN, plus thousands of additional global news sources
+- **Fallback reliability** - If one API has issues, the other continues providing news
+- **Combined translation** - All articles from both sources translated to professional Russian
+- **Rate limiting handled** - Graceful handling of API limits while maintaining service quality
+
+### ✅ NewsAPI Integration with Real Images
 - **Real news images** - High-quality images from NewsAPI sources (Al Jazeera, CNN, Reuters, BBC, etc.)
 - **Next.js Image optimization** with responsive design, loading states, and error handling
 - **Professional visual layout** - 16:9 aspect ratio with gradient overlays for text readability

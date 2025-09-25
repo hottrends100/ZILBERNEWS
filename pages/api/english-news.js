@@ -5,6 +5,8 @@ import OpenAI from "openai";
 // API configurations
 const NEWSAPI_KEY = process.env.NEWSAPI_KEY;
 const NEWSAPI_BASE_URL = 'https://newsapi.org/v2';
+const GNEWS_API_KEY = process.env.GNEWS_API_KEY;
+const GNEWS_BASE_URL = 'https://gnews.io/api/v4';
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // Cache configuration
@@ -130,13 +132,77 @@ function startBackgroundGeneration() {
   backgroundInterval = setInterval(generateNewsInBackground, CACHE_DURATION);
 }
 
-// Fetch real news using NewsAPI
-async function fetchRealNews() {
+// Fetch real news using GNews API
+async function fetchGNewsArticles() {
   try {
-    console.log('🚀 Fetching real factual news from verified sources...');
+    console.log('🚀 Fetching news from GNews API...');
+    
+    if (!GNEWS_API_KEY) {
+      throw new Error('GNews API key not found');
+    }
+
+    // Search queries focused on Ukraine-Russia conflict and political news
+    const queries = [
+      'Ukraine Russia conflict',
+      'Trump foreign policy',
+      'peace negotiations Ukraine',
+      'humanitarian crisis Ukraine',
+      'NATO Ukraine military aid',
+      'Zelensky Putin'
+    ];
+
+    const allArticles = [];
+
+    // Fetch news for each query
+    for (let i = 0; i < queries.length; i++) {
+      const query = queries[i];
+      const url = `${GNEWS_BASE_URL}/search?q=${encodeURIComponent(query)}&lang=en&country=us&max=10&sortby=publishedAt&apikey=${GNEWS_API_KEY}`;
+      
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          console.warn(`GNews query ${i + 1} failed with status ${response.status}`);
+          continue;
+        }
+        
+        const data = await response.json();
+        if (data.articles && data.articles.length > 0) {
+          // Filter valid articles
+          const validArticles = data.articles.filter(article => 
+            article.title && 
+            article.description &&
+            article.title !== '[Removed]' && 
+            article.description !== '[Removed]'
+          );
+          allArticles.push(...validArticles);
+        }
+        
+        // Rate limiting delay
+        if (i < queries.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+      } catch (fetchError) {
+        console.warn(`GNews query ${i + 1} failed:`, fetchError.message);
+        continue;
+      }
+    }
+
+    console.log(`📰 GNews: Found ${allArticles.length} total articles`);
+    return allArticles;
+  } catch (error) {
+    console.error('❌ GNews fetch error:', error);
+    return [];
+  }
+}
+
+// Fetch real news using NewsAPI (fallback)
+async function fetchNewsAPIArticles() {
+  try {
+    console.log('🚀 Fetching news from NewsAPI...');
     
     if (!NEWSAPI_KEY) {
-      throw new Error('NewsAPI key not found');
+      console.warn('⚠️ NewsAPI key not found, skipping NewsAPI');
+      return [];
     }
 
     // Focus on Ukraine-Russia conflict and political news from reliable sources
@@ -190,12 +256,62 @@ async function fetchRealNews() {
       }
     }
 
+    console.log(`📰 NewsAPI: Found ${allArticles.length} total articles`);
+    return allArticles;
+  } catch (error) {
+    console.error('❌ NewsAPI fetch error:', error);
+    return [];
+  }
+}
+
+// Combined news fetching function
+async function fetchRealNews() {
+  try {
+    console.log('🚀 Fetching real factual news from multiple sources...');
+    
+    // Fetch from both APIs in parallel for better performance
+    const [gNewsArticles, newsAPIArticles] = await Promise.all([
+      fetchGNewsArticles(),
+      fetchNewsAPIArticles()
+    ]);
+
+    // Combine articles from both sources
+    const allArticles = [...gNewsArticles, ...newsAPIArticles];
+    
     if (allArticles.length === 0) {
-      throw new Error('No articles found from NewsAPI');
+      throw new Error('No articles found from any news sources');
     }
 
+    // Normalize article format for consistent processing
+    const normalizedArticles = allArticles.map(article => {
+      // Handle different API response formats
+      if (article.source && typeof article.source === 'object') {
+        // NewsAPI format
+        return {
+          title: article.title,
+          description: article.description,
+          content: article.content,
+          url: article.url,
+          urlToImage: article.urlToImage || article.image,
+          publishedAt: article.publishedAt,
+          source: { name: article.source.name }
+        };
+      } else {
+        // GNews format
+        return {
+          title: article.title,
+          description: article.description,
+          content: article.content || article.description,
+          url: article.url,
+          urlToImage: article.image,
+          publishedAt: article.publishedAt,
+          source: { name: article.source?.name || article.source?.url || 'Unknown' }
+        };
+      }
+    });
+
     // Remove duplicates and sort by publication date
-    const uniqueArticles = allArticles.filter((article, index, self) => 
+    const uniqueArticles = normalizedArticles.filter((article, index, self) => 
       index === self.findIndex(a => a.title === article.title)
     ).sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
 
@@ -218,6 +334,8 @@ async function fetchRealNews() {
         urlToImage: article.urlToImage
       };
     });
+
+    console.log(`📊 Combined ${gNewsArticles.length} GNews + ${newsAPIArticles.length} NewsAPI = ${processedArticles.length} final articles`);
 
     // Translate all articles to Russian
     console.log('🔄 Translating articles to Russian...');
