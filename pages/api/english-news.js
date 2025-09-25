@@ -10,7 +10,8 @@ const GNEWS_BASE_URL = 'https://gnews.io/api/v4';
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // Cache configuration
-const CACHE_DURATION = 60 * 60 * 1000; // 60 minutes (1 hour) in milliseconds
+const FETCH_INTERVAL = 25 * 60 * 1000; // 25 minutes - fetch news interval
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes - publish/serve interval  
 const CACHE_FILE = path.join(process.cwd(), 'news-cache.json');
 
 // Background generation state
@@ -27,7 +28,7 @@ function cacheExists() {
   }
 }
 
-// Check if cache needs refresh (for background generation)
+// Check if cache needs refresh (for background generation - every 25 minutes)
 function cacheNeedsRefresh() {
   try {
     if (!fs.existsSync(CACHE_FILE)) {
@@ -38,10 +39,28 @@ function cacheNeedsRefresh() {
     const now = Date.now();
     const cacheAge = now - cacheData.timestamp;
     
-    return cacheAge >= CACHE_DURATION;
+    return cacheAge >= FETCH_INTERVAL; // Check against 25-minute fetch interval
   } catch (error) {
     console.error('❌ Error reading cache for refresh check:', error);
     return true;
+  }
+}
+
+// Check if cache is fresh enough to serve to users (30 minutes)
+function isCacheFreshForServing() {
+  try {
+    if (!fs.existsSync(CACHE_FILE)) {
+      return false;
+    }
+    
+    const cacheData = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf8'));
+    const now = Date.now();
+    const cacheAge = now - cacheData.timestamp;
+    
+    return cacheAge < CACHE_DURATION; // Serve if less than 30 minutes old
+  } catch (error) {
+    console.error('❌ Error checking cache freshness:', error);
+    return false;
   }
 }
 
@@ -121,15 +140,15 @@ function startBackgroundGeneration() {
     return; // Already running
   }
   
-  console.log('🚀 Starting background news generation (every hour)');
+  console.log('🚀 Starting background news generation (fetch every 25min, publish every 30min)');
   
   // Generate immediately if cache needs refresh
   if (cacheNeedsRefresh()) {
     generateNewsInBackground();
   }
   
-  // Set interval for ongoing generation
-  backgroundInterval = setInterval(generateNewsInBackground, CACHE_DURATION);
+  // Set interval for ongoing generation - fetch every 25 minutes, publish every 30 minutes
+  backgroundInterval = setInterval(generateNewsInBackground, FETCH_INTERVAL);
 }
 
 // Fetch real news using GNews API
@@ -526,8 +545,8 @@ export default async function handler(req, res) {
     // Start background generation on first request
     startBackgroundGeneration();
     
-    // Always try to serve from cache first
-    if (cacheExists()) {
+    // Serve from cache if fresh enough (within 30 minutes)
+    if (cacheExists() && isCacheFreshForServing()) {
       allArticles = loadCachedNews();
       
       if (allArticles && allArticles.length > 0) {
@@ -535,6 +554,19 @@ export default async function handler(req, res) {
         console.log('⚡ Serving cached news instantly');
       } else {
         // Cache exists but is corrupted/invalid - generate fresh
+        console.log('🔄 Cache corrupted, fetching fresh real news...');
+        allArticles = await fetchRealNews();
+        saveToCache(allArticles);
+        cacheStatus = 'recovered';
+      }
+    } else if (cacheExists()) {
+      // Cache exists but is older than 30 minutes - serve old cache while background updates
+      allArticles = loadCachedNews();
+      if (allArticles && allArticles.length > 0) {
+        cacheStatus = 'stale_served'; 
+        console.log('📰 Serving stale cache while background updates');
+      } else {
+        // Fallback to fresh fetch if cache is corrupted
         console.log('🔄 Cache corrupted, fetching fresh real news...');
         allArticles = await fetchRealNews();
         saveToCache(allArticles);
