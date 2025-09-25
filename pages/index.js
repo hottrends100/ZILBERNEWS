@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import InfiniteScroll from "react-infinite-scroll-component";
 import NewsCard from "../components/NewsCard";
+import RssTicker from "../components/RssTicker";
 
 export default function Home() {
   const [articles, setArticles] = useState([]);
@@ -33,10 +34,14 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="p-4 pb-2">
-        <h1 className="text-3xl font-bold mb-4 text-center">📰 Новостной центр</h1>
-      </div>
+    <div>
+      {/* RSS Ticker at the very top */}
+      <RssTicker />
+      
+      <div className="max-w-3xl mx-auto">
+        <div className="p-4 pb-2">
+          <h1 className="text-3xl font-bold mb-4 text-center">📰 Новостной центр</h1>
+        </div>
 
 
       <div className="px-4">
@@ -54,6 +59,7 @@ export default function Home() {
         >
           {articles.map(a => <NewsCard key={a.id} article={a} />)}
         </InfiniteScroll>
+      </div>
       </div>
     </div>
   );
