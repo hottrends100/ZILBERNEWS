@@ -139,9 +139,22 @@ export default function NewsCard({ article }) {
             <span className="text-xs text-gray-500">[{article.source}]</span>
           </div>
 
-          {/* Social Share Buttons */}
-          <div className="flex items-center gap-2 mt-4 pt-3 border-t border-gray-100 dark:border-gray-700">
-            <span className="text-xs text-gray-500 dark:text-gray-400 mr-2">Поделиться:</span>
+          {/* Publication Time */}
+          <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700">
+            <div className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+              {new Date(article.publishedAt).toLocaleString('ru-RU', {
+                day: '2-digit',
+                month: '2-digit', 
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZone: 'Europe/Moscow'
+              })}
+            </div>
+
+            {/* Social Share Buttons */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 dark:text-gray-400 mr-2">Поделиться:</span>
             
             <button
               onClick={(e) => handleShare('whatsapp', e)}
