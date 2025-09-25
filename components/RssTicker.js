@@ -5,7 +5,7 @@ const RssTicker = () => {
   const [loading, setLoading] = useState(true);
   const abortControllerRef = useRef(null);
 
-  const fetchRssData = async (retryCount = 0) => {
+  const fetchRssData = async (retryCount = 0, isBackgroundUpdate = false) => {
     try {
       // Cancel any ongoing request
       if (abortControllerRef.current) {
@@ -15,7 +15,11 @@ const RssTicker = () => {
       // Create new abort controller for this request
       abortControllerRef.current = new AbortController();
       
-      setLoading(true);
+      // Only show loading on initial fetch, not background updates
+      if (!isBackgroundUpdate) {
+        setLoading(true);
+      }
+      
       const response = await fetch('/api/rss-proxy', {
         signal: abortControllerRef.current.signal
       });
@@ -50,7 +54,9 @@ const RssTicker = () => {
       newsItems.sort((a, b) => b.pubDate - a.pubDate);
       
       setRssItems(newsItems);
-      setLoading(false);
+      if (!isBackgroundUpdate) {
+        setLoading(false);
+      }
     } catch (error) {
       // Ignore aborted requests (common in React strict mode)
       if (error.name === 'AbortError') {
@@ -63,11 +69,13 @@ const RssTicker = () => {
       // Retry logic for failed fetches (up to 2 retries)
       if (error.name === 'TypeError' && error.message === 'Failed to fetch' && retryCount < 2) {
         console.log(`Retrying RSS fetch (attempt ${retryCount + 1}/2)...`);
-        setTimeout(() => fetchRssData(retryCount + 1), 1000 * (retryCount + 1));
+        setTimeout(() => fetchRssData(retryCount + 1, isBackgroundUpdate), 1000 * (retryCount + 1));
         return;
       }
       
-      setLoading(false);
+      if (!isBackgroundUpdate) {
+        setLoading(false);
+      }
     }
   };
 
@@ -83,10 +91,10 @@ const RssTicker = () => {
       }
     }, 1500);
     
-    // Set up interval to refresh every 60 seconds
+    // Set up interval to refresh every 60 seconds (background updates)
     intervalId = setInterval(() => {
       if (mounted) {
-        fetchRssData();
+        fetchRssData(0, true); // true = background update
       }
     }, 60000);
     
@@ -137,18 +145,20 @@ const RssTicker = () => {
       
       <div className="flex-1 overflow-hidden">
         <div className="animate-marquee">
-          {rssItems.map((item, index) => (
-            <span key={index} className="whitespace-nowrap mr-8">
-              <span className="text-red-400 font-semibold mr-2">{item.time}</span>
+          {/* Duplicate the items for seamless continuous loop */}
+          {[...rssItems, ...rssItems].map((item, index) => (
+            <span key={`${index}-${item.time}`} className="whitespace-nowrap mr-12 flex items-center">
+              <span className="text-red-500 font-bold text-xs mr-3">{item.time}</span>
               <a
                 href={item.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-white hover:text-gray-300 transition-colors cursor-pointer"
+                className="text-white hover:text-gray-300 transition-colors cursor-pointer text-sm"
                 onClick={(e) => e.stopPropagation()}
               >
                 {item.title}
               </a>
+              <span className="text-gray-600 mx-4 text-lg">•</span>
             </span>
           ))}
         </div>
