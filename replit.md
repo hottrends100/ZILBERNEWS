@@ -45,6 +45,8 @@ This is a Next.js application that displays a Russian news interface with infini
 - **Fallback reliability** - If one API has issues, the other continues providing news
 - **Combined translation** - All articles from both sources translated to professional Russian
 - **Rate limiting handled** - Graceful handling of API limits while maintaining service quality
+- **Image domain fixes** - Added comprehensive Next.js image domain support for all new GNews sources
+- **Runtime error resolution** - Fixed all unhandled Next.js image configuration errors
 
 ### ✅ NewsAPI Integration with Real Images
 - **Real news images** - High-quality images from NewsAPI sources (Al Jazeera, CNN, Reuters, BBC, etc.)

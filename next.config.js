@@ -65,6 +65,76 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'bl-i.thgim.com',
       },
+      // GNews additional sources
+      {
+        protocol: 'https',
+        hostname: 'd32r1sh890xpii.cloudfront.net',
+      },
+      {
+        protocol: 'https',
+        hostname: 'assets.newsweek.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'foreignpolicy.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'assets.bwbx.io',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.readingeagle.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.newsmax.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'livenews.foxnews.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.foxnews.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'wtop.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.adn.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'arc.stimg.co',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.usnews.com',
+      },
+      // Catch additional news domains
+      {
+        protocol: 'https',
+        hostname: '**.oilprice.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.politico.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.washingtonpost.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.nytimes.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.wsj.com',
+      },
     ],
   },
   
