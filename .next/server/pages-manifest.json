@@ -3,6 +3,6 @@
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
   "/": "pages/index.js",
-  "/api/rss-proxy": "pages/api/rss-proxy.js",
-  "/api/english-news": "pages/api/english-news.js"
+  "/api/english-news": "pages/api/english-news.js",
+  "/api/rss-proxy": "pages/api/rss-proxy.js"
 }

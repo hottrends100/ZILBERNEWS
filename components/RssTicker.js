@@ -3,21 +3,20 @@ import { useState, useEffect, useRef } from 'react';
 // Global cache to persist across component re-mounts
 let globalCache = null;
 let globalLastFetchTime = 0;
-let globalFetchPromise = null;
+let globalInterval = null;
 
 const RssTicker = () => {
   const [rssItems, setRssItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const abortControllerRef = useRef(null);
-  const intervalRef = useRef(null);
+  const isMountedRef = useRef(true);
   const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes in milliseconds
 
-  const fetchRssData = async (retryCount = 0, isBackgroundUpdate = false) => {
+  const fetchRssData = async (isBackgroundUpdate = false) => {
     const now = Date.now();
     
     // Check if we have fresh global cache
     if (globalCache && (now - globalLastFetchTime) < CACHE_DURATION) {
-      if (!isBackgroundUpdate) {
+      if (!isBackgroundUpdate && isMountedRef.current) {
         setRssItems(globalCache);
         setLoading(false);
         console.log('📦 Using cached RSS data');
@@ -25,142 +24,85 @@ const RssTicker = () => {
       return;
     }
     
-    // If there's already a fetch in progress, wait for it
-    if (globalFetchPromise) {
-      try {
-        await globalFetchPromise;
-        if (globalCache) {
-          setRssItems(globalCache);
+    try {
+      console.log(isBackgroundUpdate ? '🔄 Background refresh of RSS cache...' : '📡 Fetching RSS feed...');
+      
+      const response = await fetch('/api/rss-proxy');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const xmlText = await response.text();
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+      
+      const items = xmlDoc.querySelectorAll('item');
+      const newsItems = Array.from(items).slice(0, 10).map(item => {
+        const title = item.querySelector('title')?.textContent || '';
+        const link = item.querySelector('link')?.textContent || '';
+        const pubDate = item.querySelector('pubDate')?.textContent || '';
+        
+        return {
+          title: title.trim(),
+          link: link.trim(),
+          pubDate: new Date(pubDate),
+          time: new Date(pubDate).toLocaleTimeString('ru-RU', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            timeZone: 'Europe/Moscow'
+          })
+        };
+      });
+      
+      // Sort by publication date (newest first)
+      newsItems.sort((a, b) => b.pubDate - a.pubDate);
+      
+      // Update global cache
+      globalCache = newsItems;
+      globalLastFetchTime = now;
+      
+      console.log(isBackgroundUpdate ? '✅ Background cache updated' : '✅ RSS feed loaded and cached');
+      
+      // Update component state if mounted
+      if (isMountedRef.current) {
+        setRssItems(newsItems);
+        if (!isBackgroundUpdate) {
           setLoading(false);
         }
-        return;
-      } catch (error) {
-        // Continue with new fetch if the existing one failed
       }
-    }
-    
-    // Create a new fetch promise
-    globalFetchPromise = (async () => {
-      try {
-        // Cancel any ongoing request
-        if (abortControllerRef.current) {
-          abortControllerRef.current.abort();
-        }
-        
-        // Create new abort controller for this request
-        abortControllerRef.current = new AbortController();
-        
-        console.log(isBackgroundUpdate ? '🔄 Background refresh of RSS cache...' : '📡 Fetching RSS feed...');
-        
-        const response = await fetch('/api/rss-proxy', {
-          signal: abortControllerRef.current.signal
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const xmlText = await response.text();
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
-        
-        const items = xmlDoc.querySelectorAll('item');
-        const newsItems = Array.from(items).map(item => {
-          const title = item.querySelector('title')?.textContent || '';
-          const link = item.querySelector('link')?.textContent || '';
-          const pubDate = item.querySelector('pubDate')?.textContent || '';
-          
-          return {
-            title: title.trim(),
-            link: link.trim(),
-            pubDate: new Date(pubDate),
-            time: new Date(pubDate).toLocaleTimeString('ru-RU', { 
-              hour: '2-digit', 
-              minute: '2-digit',
-              timeZone: 'Europe/Moscow'
-            })
-          };
-        });
-        
-        // Sort by publication date (newest first) and take top 10
-        newsItems.sort((a, b) => b.pubDate - a.pubDate);
-        const topNews = newsItems.slice(0, 10);
-        
-        // Update global cache
-        globalCache = topNews;
-        globalLastFetchTime = now;
-        
-        console.log(isBackgroundUpdate ? '✅ Background cache updated' : '✅ RSS feed loaded and cached');
-        
-        return topNews;
-      } finally {
-        globalFetchPromise = null;
-      }
-    })();
-    
-    try {
-      const topNews = await globalFetchPromise;
       
-      // Hot-swap the data seamlessly
-      setRssItems(topNews);
-      
-      if (!isBackgroundUpdate) {
-        setLoading(false);
-      }
     } catch (error) {
-      // Ignore aborted requests (common in React strict mode)
-      if (error.name === 'AbortError') {
-        console.log('Request aborted (likely due to component re-mount)');
-        return;
-      }
-      
       console.error('Error fetching RSS:', error.message);
       
-      // Retry logic for failed fetches (up to 2 retries)
-      if (error.name === 'TypeError' && error.message === 'Failed to fetch' && retryCount < 2) {
-        console.log(`Retrying RSS fetch (attempt ${retryCount + 1}/2)...`);
-        setTimeout(() => fetchRssData(retryCount + 1, isBackgroundUpdate), 1000 * (retryCount + 1));
-        return;
-      }
-      
-      if (!isBackgroundUpdate) {
+      if (!isBackgroundUpdate && isMountedRef.current) {
         setLoading(false);
       }
     }
   };
 
   useEffect(() => {
-    let timeoutId;
-    let mounted = true;
+    isMountedRef.current = true;
     
-    // Check if we already have cached data
+    // Check if we already have cached data - instant load
     if (globalCache && (Date.now() - globalLastFetchTime) < CACHE_DURATION) {
       setRssItems(globalCache);
       setLoading(false);
       console.log('📦 Using cached RSS data');
     } else {
-      // Add a small delay before first fetch to ensure server is ready
-      timeoutId = setTimeout(() => {
-        if (mounted) {
-          fetchRssData();
-        }
-      }, 1500);
+      // Fetch immediately if no cache
+      fetchRssData();
     }
     
-    // Set up a single global interval for background refresh (only if not already set)
-    if (!intervalRef.current) {
-      intervalRef.current = setInterval(() => {
-        fetchRssData(0, true); // true = background update
+    // Set up global background refresh interval (only once)
+    if (!globalInterval) {
+      globalInterval = setInterval(() => {
+        fetchRssData(true); // background update
       }, CACHE_DURATION);
     }
     
     return () => {
-      mounted = false;
-      clearTimeout(timeoutId);
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-      // Don't clear the global interval - let it continue for other instances
+      isMountedRef.current = false;
     };
   }, []);
 
