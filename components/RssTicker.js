@@ -66,9 +66,11 @@ const RssTicker = () => {
       
       // Update component state if mounted
       if (isMountedRef.current) {
+        console.log('📋 Setting RSS items:', newsItems.length, 'items');
         setRssItems(newsItems);
         if (!isBackgroundUpdate) {
           setLoading(false);
+          console.log('🎯 Loading set to false');
         }
       }
       
@@ -88,9 +90,10 @@ const RssTicker = () => {
     if (globalCache && (Date.now() - globalLastFetchTime) < CACHE_DURATION) {
       setRssItems(globalCache);
       setLoading(false);
-      console.log('📦 Using cached RSS data');
+      console.log('📦 Using cached RSS data', globalCache.length, 'items');
     } else {
       // Fetch immediately if no cache
+      console.log('🚀 No cache, fetching RSS data...');
       fetchRssData();
     }
     
@@ -106,7 +109,10 @@ const RssTicker = () => {
     };
   }, []);
 
+  console.log('🔍 Component state:', { loading, itemsCount: rssItems.length });
+
   if (loading && rssItems.length === 0) {
+    console.log('⏳ Showing loading state');
     return (
       <div className="w-full bg-black text-white h-10 flex items-center overflow-hidden">
         <div className="flex items-center px-4">
@@ -121,6 +127,7 @@ const RssTicker = () => {
 
   // Fallback when no RSS items and not loading
   if (!loading && rssItems.length === 0) {
+    console.log('❌ No items loaded');
     return (
       <div className="w-full bg-black text-white h-10 flex items-center overflow-hidden">
         <div className="flex items-center px-4">
@@ -133,6 +140,8 @@ const RssTicker = () => {
     );
   }
 
+  console.log('✅ Rendering ticker with', rssItems.length, 'items');
+  
   return (
     <div className="w-full bg-black text-white h-10 flex items-center overflow-hidden">
       <div className="flex items-center px-4 flex-shrink-0">
