@@ -135,6 +135,14 @@ const nextConfig = {
         protocol: 'https',
         hostname: '**.wsj.com',
       },
+      {
+        protocol: 'https',
+        hostname: '**.washingtonexaminer.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.inquirer.com',
+      },
     ],
   },
   
